@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { TracksModule } from './tracks/tracks.module';
 import { TracksQueueModule } from './tracks-queue/tracks-queue.module';
 import { ConfigModule } from '@nestjs/config';
+import { MorganMiddleware } from './middlewares/morgan.middleware';
 
 @Module({
   imports: [
@@ -10,4 +11,8 @@ import { ConfigModule } from '@nestjs/config';
     TracksQueueModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MorganMiddleware).forRoutes('*');
+  }
+}

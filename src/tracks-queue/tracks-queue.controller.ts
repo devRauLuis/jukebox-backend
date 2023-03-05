@@ -11,9 +11,19 @@ export class TracksQueueController {
     return this.tracksQueueService.addTrackToQueue(payload);
   }
 
+  @Post('/queue-random-track')
+  queueRandomTrack() {
+    return this.tracksQueueService.queueRandomTrack();
+  }
+
   @Get()
   findAll() {
     return this.tracksQueueService.findAll();
+  }
+
+  @Get('/all-tracks')
+  findAllTracks(@Param('idx') idx: string) {
+    return this.tracksQueueService.findAllTracks();
   }
 
   @Get('/next/:idx')
@@ -26,8 +36,13 @@ export class TracksQueueController {
     return this.tracksQueueService.findPrevious(+idx);
   }
 
-  @Delete('/:id')
-  removeTrack(@Param('id') id: string) {
-    return this.tracksQueueService.removeTrack(+id);
+  @Delete('/pop')
+  popQueue() {
+    return this.tracksQueueService.popQueue();
+  }
+
+  @Delete('/:posId')
+  removeTrack(@Param('posId') id: string) {
+    return this.tracksQueueService.removeTrack(id);
   }
 }
