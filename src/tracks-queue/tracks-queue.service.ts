@@ -6,12 +6,15 @@ import { ConfigService } from '@nestjs/config';
 import findMetadataByPath from 'src/util/getMetadataByPath';
 import { TracksQueueGateway } from './tracks-queue.gateway';
 import { v4 as uuidv4 } from 'uuid';
+import { Request, Response } from 'express';
+import { TracksService } from 'src/tracks/tracks.service';
 
 @Injectable()
 export class TracksQueueService {
   constructor(
     private readonly configService: ConfigService,
     private readonly tracksQueueGateway: TracksQueueGateway,
+    private readonly tracksService: TracksService,
   ) {}
 
   trackList = [];
@@ -29,12 +32,22 @@ export class TracksQueueService {
     console.log('Saving tracks to storage ', tracksDir);
 
     fs.readdir(tracksDir, (_, files) => {
-      files.forEach(async (file) => {
-        const songName = file.split('.')[0];
-        const metadata = findMetadataByPath(`${tracksDir}/${file}`);
-        // console.log(metadata);
-        this.trackList.push({ id: uuidv4(), songName, ...metadata });
-      });
+      // files.forEach(async (file) => {
+      //   const songName = file.split('.')[0];
+      //   const metadata = await findMetadataByPath(`${tracksDir}/${file}`);
+      // console.log(metadata);  const allowedFileTypes = ['mp3'];
+      const allowedFileTypes = ['mp3'];
+
+      files
+        .filter((f) => allowedFileTypes.includes(f.split('.')[1]))
+        .forEach(async (file) => {
+          const songName = file.split('.')[0];
+          const metadata = await findMetadataByPath(`${tracksDir}/${file}`);
+          // console.log('metadata', metadata);
+          this.trackList.push({ id: uuidv4(), songName, ...metadata });
+        });
+      // this.trackList.push({ id: uuidv4(), songName, ...metadata });
+      // });
     });
   }
 
@@ -57,14 +70,15 @@ export class TracksQueueService {
     const randomIndex = Math.floor(Math.random() * this.trackList.length);
     const randomTrack = this.trackList[randomIndex];
 
-    this.queue.push({
-      ...randomTrack,
-      posId: uuidv4(),
-    });
+    if (randomTrack) {
+      this.queue.push({
+        ...randomTrack,
+        posId: uuidv4(),
+      });
+      this.updateSocket();
 
-    this.updateSocket();
-
-    return { ...randomTrack };
+      return { ...randomTrack };
+    }
   }
 
   findAllTracks() {
@@ -73,6 +87,18 @@ export class TracksQueueService {
 
   findAll() {
     return this.queue;
+  }
+
+  async nowPlaying(req: Request, res: Response) {
+    const q = [...this.queue];
+    const { songName, id, posId } = q.shift() || {};
+
+    if (songName) {
+      const song = await this.tracksService.getMetadata(songName);
+      res.status(200).json({ ...song, id, posId });
+    } else {
+      res.status(404).send('Queue is empty');
+    }
   }
 
   findNext(idx: number) {
@@ -114,4 +140,19 @@ export class TracksQueueService {
   updateSocket() {
     this.tracksQueueGateway.queueUpdated(this.queue);
   }
+
+  // async getMetadata(key: string) {
+  //   const filePath = path.join(
+  //     `${this.configService.get<string>('TRACKS_PATH')}/${key}.mp3`,
+  //   );
+
+  //   const metadata = await findMetadataByPath(filePath);
+  //   const image = findAlbumArtByPath(filePath);
+
+  //   if (metadata) {
+  //     return { songName: key, ...metadata, image };
+  //   } else {
+  //     throw new NotFoundException('Meta not found');
+  //   }
+  // }
 }

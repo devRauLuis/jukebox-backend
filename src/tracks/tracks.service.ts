@@ -24,8 +24,6 @@ export class TracksService implements OnModuleInit {
   tracks = [];
 
   saveTracksOnStorage() {
-    console.log('Saving tracks');
-
     const tracksDir = path.join(this.configService.get<string>('TRACKS_PATH'));
 
     fs.readdir(tracksDir, (_, files) => {
@@ -34,9 +32,8 @@ export class TracksService implements OnModuleInit {
         .filter((f) => allowedFileTypes.includes(f.split('.')[1]))
         .forEach(async (file) => {
           const songName = file.split('.')[0];
-          const metadata = findMetadataByPath(`${tracksDir}/${file}`);
-          // console.log('metadata', metadata);
-          this.tracks.push({ songName, ...metadata, image: undefined });
+          const metadata = await findMetadataByPath(`${tracksDir}/${file}`);
+          this.tracks.push({ songName, ...metadata });
         });
     });
   }
@@ -44,29 +41,6 @@ export class TracksService implements OnModuleInit {
   findAll() {
     return this.tracks;
   }
-
-  // async streamTrack(key: string, req: Request, res: Response) {
-  //   const filePath = path.join(
-  //     `${this.configService.get<string>('TRACKS_PATH')}/${key}.mp3`,
-  //   );
-
-  //   // Create a ReadStream to stream the song file
-  //   const songStream = createReadStream(filePath);
-  //   const stat = statSync(filePath);
-
-  //   res.writeHead(200, {
-  //     'Content-Type': 'audio/mpeg',
-  //     'Content-Length': stat.size,
-  //     'Accept-Ranges': 'bytes',
-  //     'Cache-Control': 'no-cache',
-  //     Connection: 'keep-alive',
-  //     'Content-Range': `bytes 0-${stat.size - 1}/${stat.size}`,
-  //     'Transfer-Encoding': 'chunked',
-  //   });
-
-  //   // Stream the song file to the client
-  //   songStream.pipe(res);
-  // }
 
   async streamTrack(key: string, req: Request, res: Response) {
     const musicPath = path.join(
@@ -120,18 +94,19 @@ export class TracksService implements OnModuleInit {
     readStream.pipe(res);
   }
 
-  async getMetadata(key: string, req: Request, res: Response) {
+  async getMetadata(key: string) {
     const filePath = path.join(
       `${this.configService.get<string>('TRACKS_PATH')}/${key}.mp3`,
     );
 
-    const metadata = findMetadataByPath(filePath);
+    console.log('Find metadata called');
+    const metadata = await findMetadataByPath(filePath);
     const image = findAlbumArtByPath(filePath);
 
     if (metadata) {
-      res.status(200).json({ songName: key, ...metadata, image });
+      return { songName: key, ...metadata, image };
     } else {
-      res.status(404).send('Meta not found');
+      throw new NotFoundException('Meta not found');
     }
   }
 

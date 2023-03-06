@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
-import { Delete } from '@nestjs/common/decorators';
+import { Delete, Req, Res } from '@nestjs/common/decorators';
 import { TracksQueueService } from './tracks-queue.service';
+import { Request, Response } from 'express';
 
 @Controller('tracks-queue')
 export class TracksQueueController {
@@ -19,6 +20,11 @@ export class TracksQueueController {
   @Get()
   findAll() {
     return this.tracksQueueService.findAll();
+  }
+
+  @Get('now-playing')
+  findNowPlaying(@Req() req: Request, @Res() res: Response) {
+    return this.tracksQueueService.nowPlaying(req, res);
   }
 
   @Get('/all-tracks')
